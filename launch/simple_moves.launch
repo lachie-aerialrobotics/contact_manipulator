@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<launch>
+
+  <arg name="namespace"                  default="manipulator_1"/> 
+  <param name="namespace"                 value="$(arg namespace)"/>
+
+  <node name="Position_pub" pkg="contact_manipulator" type="example_trajectories.py" required="true" output="screen"/>
+  
+  <node name="Inverse_kinematics" pkg="contact_manipulator" type="Inverse_kinematics.py" required="true" output="screen"/>
+
+  <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/>
+</launch>
