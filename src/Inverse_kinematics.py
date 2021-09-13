@@ -81,11 +81,12 @@ def Force2Current(R,servo,z,theta,phi):
         np.sin(theta) * np.cos(servo[0])) / (np.cos(servo[2]) * 
         np.sin(servo[0]) + np.sin(servo[2]) * np.cos(servo[0]))
     
-    T[0] = (R * geom.l * np.cos(theta) * np.cos(phi) - T[1] * np.cos(servo[1]) - 
+    T[0] = (R * l * np.cos(theta) * np.cos(phi) - T[1] * np.cos(servo[1]) - 
         T[2] * np.cos(servo[2])) / np.cos(servo[0])
 
     #calculate servo current limit to achieve desired torque (taken from datasheet graph)
-    I = -1.03925 * T + 0.08021
+    I = (-0.66733 * T - 0.05492) * 2.69
+
     return I
 
 def delta_callback_tip(tip_pos_sub, tip_force_sub):
@@ -103,10 +104,10 @@ def delta_callback_tip(tip_pos_sub, tip_force_sub):
     servo  = invPosKinematics(z,theta,phi) # calculate servo angles
     I = Force2Current(R,servo,z,theta,phi) # calculate current limit
     
-    #xonvert servo angles to bits
-    servo[0] = 2048 + 1024 * (servo[0] * (2/np.pi))
+    #convert servo angles to bits
+    servo[0] = 2048 - 1024 * (servo[0] * (2/np.pi))
     servo[1] = 2048 - 1024 * (servo[1] * (2/np.pi))
-    servo[2] = 2048 + 1024 * (servo[2] * (2/np.pi))
+    servo[2] = 2048 - 1024 * (servo[2] * (2/np.pi))
 
     #put servo angles in message format
     servo_angle.header.stamp = rospy.Time.now()
