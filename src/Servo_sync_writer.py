@@ -36,8 +36,8 @@ def Initialise():
     packetHandler = PacketHandler(PROTOCOL_VERSION)
 
     # Initialize GroupSyncWrite instance
-    groupSyncWrite_goal_position = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION)
-    groupSyncWrite_current_lim = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_CURRENT_LIM, LEN_PRO_CURRENT_LIM)
+    groupSyncWrite = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION)
+    #groupSyncWrite_current_lim = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_CURRENT_LIM, LEN_PRO_CURRENT_LIM)
     #groupSyncWriteVel = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_PROFILE_VELOCITY, 4)
     #groupSyncWriteAcc = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_PROFILE_ACCELERATION, 4)
 
@@ -77,9 +77,9 @@ def Initialise():
 
         # packetHandler.write1ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_RETURN_DELAY_TIME, 0)
 
-    return groupSyncWrite_goal_position, groupSyncWrite_current_lim, portHandler, packetHandler
+    return groupSyncWrite, portHandler, packetHandler
 
-def ServoCallback(servo_angle_sub, servo_current_sub):
+def ServoCallback(servo_angle_sub): #servo_current_sub):
     # Allocate goal position value into byte array
 
     dxl_goal_position = [None] * 3
@@ -89,11 +89,11 @@ def ServoCallback(servo_angle_sub, servo_current_sub):
     dxl_goal_position[1] = servo_angle_sub.theta2
     dxl_goal_position[2] = servo_angle_sub.theta3
 
-    dxl_current_lim = [None] * 3
-    param_current_lim = [None] * 3
-    dxl_current_lim[0] = servo_current_sub.theta1
-    dxl_current_lim[1] = servo_current_sub.theta1
-    dxl_current_lim[2] = servo_current_sub.theta1
+    #dxl_current_lim = [None] * 3
+    #param_current_lim = [None] * 3
+    #dxl_current_lim[0] = servo_current_sub.theta1
+    #dxl_current_lim[1] = servo_current_sub.theta1
+    #dxl_current_lim[2] = servo_current_sub.theta1
     
     for i in range(3):
         param_goal_position[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position[i]))]
@@ -104,28 +104,28 @@ def ServoCallback(servo_angle_sub, servo_current_sub):
             #quit()
         
     #SyncWrite goal position    
-    dxl_comm_result = groupSyncWrite_goal_position.txPacket()
+    dxl_comm_result = groupSyncWrite.txPacket()
     if dxl_comm_result != COMM_SUCCESS:
         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
     # Clear Syncwrite parameter storage
-    groupSyncWrite_goal_position.clearParam()
+    groupSyncWrite.clearParam()
 
-    for i in range(3):
-        param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
-        # Add Dynamixel goal position value to the Syncwrite parameter storage
-        dxl_addparam_result = groupSyncWrite.addParam(DXL_ID[i], param_current_lim[i])
-        if dxl_addparam_result != True:
-            print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
-            #quit()
+    #for i in range(3):
+    #    param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
+    #    # Add Dynamixel goal position value to the Syncwrite parameter storage
+    #    dxl_addparam_result = groupSyncWrite.addParam(DXL_ID[i], param_current_lim[i])
+    #    if dxl_addparam_result != True:
+    #        print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
+    #        #quit()
         
     #SyncWrite current lims 
-    dxl_comm_result = groupSyncWrite_current_lim.txPacket()
-    if dxl_comm_result != COMM_SUCCESS:
-        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    #dxl_comm_result = groupSyncWrite_current_lim.txPacket()
+    #if dxl_comm_result != COMM_SUCCESS:
+    #    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
     # Clear Syncwrite parameter storage
-    groupSyncWrite_current_lim.clearParam()
+    #groupSyncWrite_current_lim.clearParam()
     
     
 if __name__ == '__main__':
@@ -149,16 +149,16 @@ if __name__ == '__main__':
     DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
 
 
-    groupSyncWrite_goal_position, groupSyncWrite_current_lim, portHandler, packetHandler = Initialise()
+    groupSyncWrite, portHandler, packetHandler = Initialise()
 
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
     servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles', servo_angles) #target angle subscriber
-    servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #target angle subscriber
+    #servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #target angle subscriber
     
     theta = servo_angles() # initialise servo angles
-    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles_read', servo_angles, queue_size=1) # servo angle publisher
-    ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 100)
+    #servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles_read', servo_angles, queue_size=1) # servo angle publisher
+    ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub], 1, 100)
     ts.registerCallback(ServoCallback)
     rospy.spin()
 

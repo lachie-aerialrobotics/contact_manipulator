@@ -25,16 +25,25 @@ def config_callback(config, level):
     return config
 
 def trig_solve(a,b,c):
+    print("a= ",a)
+    print("b= ",b)
+    print("c= ",c)
+    print("1st bit: ", c / (np.sqrt(a**2 + b**2)))
+    print("2nd bit: ", a/b)
     #solve the equation: a*sin(x) + b*cos(x) = c
     if b == 0.0:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.pi/2
+    #elif c / (np.sqrt(a**2 + b**2)) < 0:
+    #    x = np.pi/2 - np.arccos(abs(c / (np.sqrt(a**2 + b**2)))) + np.arctan(a / b)
     else:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.arctan(a / b)
     if (x <= np.pi/2) and (x >= -np.pi/2):
         print("good solve") 
     else:
         print("SOLVE FAIL")
-        quit()
+        #quit()
+
+    print("3rd bit: ", np.arccos(abs(c / (np.sqrt(a**2 + b**2)))))
     return x
 
 #def radians2bits(t):
@@ -47,6 +56,11 @@ def invPosKinematics(z,theta,phi):
     l = geom.l         #proximal link length in m
     r = geom.r         #end-effector platform radius in m
     b = geom.b         #base radius in m
+
+    print("L= ",L)
+    print("l= ",l)
+    print("r= ",r)
+    print("b= ",b)
 
     #Solve position kinematics
     A = -z + r * np.sin(theta)
@@ -62,12 +76,18 @@ def invPosKinematics(z,theta,phi):
     I = (L**2 - G**2 - H**2 - l**2) / (2*l)
 
     #servo angles in radians
-    servo = np.empty([3,1])
-    servo[0] = trig_solve(A,B,C)
-    servo[1] = trig_solve(D,E,F)
-    servo[2] = trig_solve(G,H,I)
+    servo0 = trig_solve(A,B,C)
+    servo1 = trig_solve(D,E,F)
+    servo2 = trig_solve(G,H,I)
+
+    x_parasitic = ParasiticMotion(r, theta, phi)
   
-    return servo
+    return servo0, servo1, servo2, x_parasitic
+
+def ParasiticMotion(r, theta, phi):
+    #Calculate parasitic motion in x direction
+    x = r * (np.sin(theta) * np.sin(phi))
+    return x
 
 def Force2Current(R,servo,z,theta,phi):
     #calculate servo torques
@@ -93,7 +113,7 @@ def delta_callback_tip(tip_pos_sub, tip_force_sub):
     global servo_angle_pub
     global servo_current_pub
     servo_angle = servo_angles()
-    servo_current = servo_angles()
+    # servo_current = servo_angles()
 
     z = tip_pos_sub.point.z
     theta = tip_pos_sub.point.x
@@ -101,28 +121,28 @@ def delta_callback_tip(tip_pos_sub, tip_force_sub):
 
     R = tip_force_sub.data
     
-    servo  = invPosKinematics(z,theta,phi) # calculate servo angles
-    I = Force2Current(R,servo,z,theta,phi) # calculate current limit
+    servo0, servo1, servo2, x_parasitic  = invPosKinematics(z,theta,phi) # calculate servo angles
+    # I = Force2Current(R,servo,z,theta,phi) # calculate current limit
     
     #convert servo angles to bits
-    servo[0] = 2048 - 1024 * (servo[0] * (2/np.pi))
-    servo[1] = 2048 - 1024 * (servo[1] * (2/np.pi))
-    servo[2] = 2048 - 1024 * (servo[2] * (2/np.pi))
+    servo0 = 2048 + 1024 * (servo0 * (2/np.pi))
+    servo1 = 2048 + 1024 * (servo1 * (2/np.pi))
+    servo2 = 2048 - 1024 * (servo2 * (2/np.pi))
 
     #put servo angles in message format
     servo_angle.header.stamp = rospy.Time.now()
     servo_angle.header.frame_id = "/fcu"
-    servo_angle.theta1 = int(servo.item(0))
-    servo_angle.theta2 = int(servo.item(1))
-    servo_angle.theta3 = int(servo.item(2))
+    servo_angle.theta1 = int(servo0)
+    servo_angle.theta2 = int(servo1)
+    servo_angle.theta3 = int(servo2)
     servo_angle_pub.publish(servo_angle)
 
-    servo_current.header.stamp = rospy.Time.now()
-    servo_current.header.frame_id = "/fcu"
-    servo_current.theta1 = int(I.item(0))
-    servo_current.theta2 = int(I.item(1))
-    servo_current.theta3 = int(I.item(2))
-    servo_current_pub.publish(servo_current)
+    # servo_current.header.stamp = rospy.Time.now()
+    # servo_current.header.frame_id = "/fcu"
+    # servo_current.theta1 = int(I.item(0))
+    # servo_current.theta2 = int(I.item(1))
+    # servo_current.theta3 = int(I.item(2))
+    # servo_current_pub.publish(servo_current)
 
 if __name__ == '__main__':
     global servo_vel_pub
@@ -135,7 +155,7 @@ if __name__ == '__main__':
 
     # PUBLISHER
     servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
-    servo_current_pub = rospy.Publisher(robot_name+'/servo_current_lims', servo_angles, queue_size=1) # servo current publisher
+    # servo_current_pub = rospy.Publisher(robot_name+'/servo_current_lims', servo_angles, queue_size=1) # servo current publisher
 
     #SUBSCRIBER
     tip_pos_sub = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #target angle subscriber

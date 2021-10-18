@@ -1,25 +1,31 @@
 #!/usr/bin/env python
 import numpy as np
 
-z = 0.08         #target height
-theta = 1/10 * np.pi       #target yaw angle
-phi = 1/10 * np.pi          #target pitch angle
+z = -0.19         #target height
+theta = 0 * np.pi       #target yaw angle
+phi = 0 * np.pi          #target pitch angle
 
-L = 0.09         #distal link length in m
-l = 0.03         #proximal link length in m
-r = 0.04         #end-effector platform radius in m
-b = 0.05         #base radius in m
+L = 0.18         #distal link length in m
+l = 0.06         #proximal link length in m
+r = 0.08         #end-effector platform radius in m
+b = 0.063         #base radius in m
 
 R = 100         #force in N
 
 def trig_solve(a,b,c):
     #solve the equation: a*sin(x) + b*cos(x) = c
+    print("a= ",a)
+    print("b= ",b)
+    print("c= ",c)
+    print("1st bit: ", c / (np.sqrt(a**2 + b**2)))
+    print("2nd bit: ", a/b)
     if b == 0.0:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.pi/2
+    #elif c / (np.sqrt(a**2 + b**2)) < 0.0:
+    #    x = -np.arccos(abs(c / (np.sqrt(a**2 + b**2)))) + np.arctan(a / b)
     else:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.arctan(a / b)
-        #print("1st bit: ", c / (np.sqrt(a**2 + b**2)))
-        #print("2nd bit: ", a/b)
+
     if (x <= np.pi/2) and (x >= -np.pi/2):
         print("good solve") 
     else:
