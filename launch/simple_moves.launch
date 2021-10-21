@@ -10,5 +10,5 @@
 
   <node name="Servo_writer" pkg="contact_manipulator" type="Servo_sync_writer.py" required="true" output="screen"/>
 
-  <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/>
+  <!-- <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/> !-->
 </launch>
