@@ -25,11 +25,11 @@ def config_callback(config, level):
     return config
 
 def trig_solve(a,b,c):
-    print("a= ",a)
-    print("b= ",b)
-    print("c= ",c)
-    print("1st bit: ", c / (np.sqrt(a**2 + b**2)))
-    print("2nd bit: ", a/b)
+    # print("a= ",a)
+    # print("b= ",b)
+    # print("c= ",c)
+    # print("1st bit: ", c / (np.sqrt(a**2 + b**2)))
+    # print("2nd bit: ", a/b)
     #solve the equation: a*sin(x) + b*cos(x) = c
     if b == 0.0:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.pi/2
@@ -37,13 +37,13 @@ def trig_solve(a,b,c):
     #    x = np.pi/2 - np.arccos(abs(c / (np.sqrt(a**2 + b**2)))) + np.arctan(a / b)
     else:
         x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.arctan(a / b)
-    if (x <= np.pi/2) and (x >= -np.pi/2):
-        print("good solve") 
-    else:
-        print("SOLVE FAIL")
-        #quit()
+    # if (x <= np.pi/2) and (x >= -np.pi/2):
+    #     print("good solve") 
+    # else:
+    #     print("SOLVE FAIL")
+    #     #quit()
 
-    print("3rd bit: ", np.arccos(abs(c / (np.sqrt(a**2 + b**2)))))
+    # print("3rd bit: ", np.arccos(abs(c / (np.sqrt(a**2 + b**2)))))
     return x
 
 #def radians2bits(t):
@@ -57,10 +57,10 @@ def invPosKinematics(z,theta,phi):
     r = geom.r         #end-effector platform radius in m
     b = geom.b         #base radius in m
 
-    print("L= ",L)
-    print("l= ",l)
-    print("r= ",r)
-    print("b= ",b)
+    # print("L= ",L)
+    # print("l= ",l)
+    # print("r= ",r)
+    # print("b= ",b)
 
     #Solve position kinematics
     A = -z + r * np.sin(theta)
