@@ -42,7 +42,7 @@ def Initialise():
     #groupSyncWriteAcc = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_PROFILE_ACCELERATION, 4)
 
     # Initialize GroupSyncRead instace for Present Position
-    #groupSyncRead = GroupSyncRead(portHandler, packetHandler, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    groupSyncRead = GroupSyncRead(portHandler, packetHandler, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
 
     # Open port
     if portHandler.openPort():
@@ -77,23 +77,15 @@ def Initialise():
 
         # packetHandler.write1ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_RETURN_DELAY_TIME, 0)
 
-    return groupSyncWrite, portHandler, packetHandler
+    return groupSyncWrite, groupSyncRead, portHandler, packetHandler
 
-def ServoCallback(servo_angle_sub): #servo_current_sub):
+def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     # Allocate goal position value into byte array
-
     dxl_goal_position = [None] * 3
     param_goal_position = [None] * 3
-    
     dxl_goal_position[0] = servo_angle_sub.theta1
     dxl_goal_position[1] = servo_angle_sub.theta2
     dxl_goal_position[2] = servo_angle_sub.theta3
-
-    #dxl_current_lim = [None] * 3
-    #param_current_lim = [None] * 3
-    #dxl_current_lim[0] = servo_current_sub.theta1
-    #dxl_current_lim[1] = servo_current_sub.theta1
-    #dxl_current_lim[2] = servo_current_sub.theta1
     
     for i in range(3):
         param_goal_position[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position[i]))]
@@ -111,22 +103,29 @@ def ServoCallback(servo_angle_sub): #servo_current_sub):
     # Clear Syncwrite parameter storage
     groupSyncWrite.clearParam()
 
-    #for i in range(3):
-    #    param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
-    #    # Add Dynamixel goal position value to the Syncwrite parameter storage
-    #    dxl_addparam_result = groupSyncWrite.addParam(DXL_ID[i], param_current_lim[i])
-    #    if dxl_addparam_result != True:
-    #        print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
-    #        #quit()
+    dxl_current_lim = [None] * 3
+    param_current_lim = [None] * 3
+    dxl_current_lim[0] = servo_current_sub.theta1
+    dxl_current_lim[1] = servo_current_sub.theta1
+    dxl_current_lim[2] = servo_current_sub.theta1
+
+    for i in range(3):
+        param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
+        # Add Dynamixel current_lim value to the Syncwrite parameter storage
+        dxl_addparam_result = groupSyncWrite.addParam(DXL_ID[i], param_current_lim[i])
+        if dxl_addparam_result != True:
+            print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
+            #quit()
         
-    #SyncWrite current lims 
-    #dxl_comm_result = groupSyncWrite_current_lim.txPacket()
-    #if dxl_comm_result != COMM_SUCCESS:
-    #    print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    #SyncWrite current_lim 
+    dxl_comm_result = groupSyncWrite.txPacket()
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
     # Clear Syncwrite parameter storage
-    #groupSyncWrite_current_lim.clearParam()
-    
+    groupSyncWrite.clearParam()
+
+
     
 if __name__ == '__main__':
     # Control table address
@@ -153,12 +152,12 @@ if __name__ == '__main__':
 
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
-    servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles', servo_angles) #target angle subscriber
-    #servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #target angle subscriber
+    servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_commanded', servo_angles) #target angle subscriber
+    servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
     
     theta = servo_angles() # initialise servo angles
-    #servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles_read', servo_angles, queue_size=1) # servo angle publisher
-    ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub], 1, 100)
+    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles_measured', servo_angles, queue_size=1) # servo angle publisher
+    ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 100)
     ts.registerCallback(ServoCallback)
     rospy.spin()
 
