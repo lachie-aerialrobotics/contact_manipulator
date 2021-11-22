@@ -1,11 +1,11 @@
 #!/usr/bin/env python
+from operator import eq
 from sympy import *
 
 global eq1x, eq1z, eq2y, eq2z, eq3x, eq3z
 
 var("r b l L Theta1 Theta2 Theta3") # known geometry of manipulator and input servo angles
 var("alpha beta gamma theta phi z") # unknown elbow joint angles and end effector states
-
 def pretty_printer(): #simple function to print the equations with pretty ascii art
     print("-------------------------------------------------------------------------------")
     print("-------------------------------------------------------------------------------")
@@ -50,6 +50,8 @@ eq2z = eq2z.subs(l*sin(Theta2),D)
 eq3x = eq3x.subs(b + l*cos(Theta3),E)*(-1)
 eq3z = eq3z.subs(l*sin(Theta3),F)
 
+pretty_printer()
+
 # make tan(1/2*theta) substitution using sympy.rewrite() to remove trig terms
 var("ta2 tb2 tg2 tt2 tp2")
 eq1x = eq1x.rewrite(tan).subs(tan(alpha/2),ta2).subs(tan(theta/2),tt2).subs(tan(phi/2),tp2)
@@ -58,7 +60,7 @@ eq2y = eq2y.rewrite(tan).subs(tan(beta/2),tb2).subs(tan(theta/2),tt2).subs(tan(p
 eq2z = eq2z.rewrite(tan).subs(tan(beta/2),tb2).subs(tan(theta/2),tt2).subs(tan(phi/2),tp2)
 eq3x = eq3x.rewrite(tan).subs(tan(gamma/2),tg2).subs(tan(theta/2),tt2).subs(tan(phi/2),tp2)
 eq3z = eq3z.rewrite(tan).subs(tan(gamma/2),tg2).subs(tan(theta/2),tt2).subs(tan(phi/2),tp2)
-
+#
 # I thiiiiink its ok to combine all the fractions and multiply out by the denominators? (might lose some possible solutions but not sure we need them)
 eq1x = eq1x.together() * ((ta2**2 + 1)*(tp2**2 + 1)*(tt2**2 + 1))
 eq1z = eq1z.together() * ((ta2**2 + 1)*(tt2**2 + 1))
@@ -79,4 +81,32 @@ eq3z = eq3z.expand()
 # So we can directly substitute out the alpha/beta/gamma elbow joint angles in each pair of equations but then we get
 # terms^4. Maybe there's some way of subbing into the quadratic formula and then combining those results?
 
+eq1x = collect(eq1x,z)
+eq1z = collect(eq1z,z)
+eq2y = collect(eq2y,z)
+eq2z = collect(eq2z,z)
+eq3x = collect(eq3x,z)
+eq3z = collect(eq3z,z)
+
 pretty_printer()
+
+result_z_1 = solve(eq1z,z)
+result_z_2 = solve(eq2z,z)
+result_z_3 = solve(eq3z,z)
+
+result_tt2_1 = solve(eq1x,tt2)
+result_tp2_1 = solve(eq1x,tp2)
+# result_tt2_2 = solve(eq2y,tt2)
+result_tp2_2 = solve(eq2y,tp2)
+result_tt2_3 = solve(eq3x,tt2)
+result_tp2_3 = solve(eq3x,tp2)
+
+pprint(result_z_2[0])
+pprint(result_tp2_2[0])
+pprint(result_tt2_1[0].subs(tp2,result_tp2_2[0]).simplify())
+
+result_tt2_1[0] = result_tt2_1[0].subs(tp2,result_tp2_2[0]).simplify()
+
+# eq1z = eq1z.subs(z,result_z_2[0]).subs(tp2,result_tp2_2[0]).subs(tt2,result_tt2_1[0])
+# eq1z = eq1z.expand().simplify()
+# pprint(eq1z)

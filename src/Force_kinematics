@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+from sympy import *
+
+var("Theta_1 Theta_2 Theta_3") # servo angles
+var("T_1 T_2 T_3") # servo torques
+var("z phi theta") # end effector states
+var("alpha beta gamma") # elbow joint angles
+var("R") # rotation matrix from mobile end-effector coordinates to base coordinates
+var("l r") # geometric parameters
+
+
+R = Matrix([[cos(theta), sin(theta) * sin(phi), sin(theta) * cos(phi)],
+    [0, cos(phi), -sin(phi)],
+    [-sin(theta), cos(theta) * sin(phi), cos(theta) * cos(phi)]])
+
+PA_1 = Matrix([r, 0, 0])
+PA_2 = Matrix([0, r, 0])
+PA_3 = Matrix([-r, 0, 0])
+
+n_1 = Matrix([-cos(alpha), 0, sin(alpha)])
+n_2 = Matrix([0 ,-cos(beta), sin(beta)])
+n_3 = Matrix([cos(gamma), 0, sin(gamma)])
+
+F_1 = Matrix([T_1/l * sin(Theta_1), 0, T_1/l * cos(Theta_1)]).dot(n_1)*n_1
+F_2 = Matrix([0, T_2/l * sin(Theta_2), T_2/l * cos(Theta_2)]).dot(n_2)*n_2
+F_3 = Matrix([T_3/-l * sin(Theta_3), 0, T_3/l * cos(Theta_3)]).dot(n_3)*n_3
+
+T = F_1.cross(R * PA_1) + F_2.cross(R * PA_2) + F_3.cross(R * PA_3)
+F = F_1 + F_2 + F_3
+
+var("F_z T_phi T_theta")
+
+eq1 = F[2].simplify() - F_z
+eq2 = T[0].simplify() - T_phi
+eq3 = T[1].simplify() - T_theta
+
+result = solve((eq1,eq2,eq3),(T_1,T_2,T_3))
+
+result[T_1] = result[T_1].simplify()
+result[T_2] = result[T_2].simplify()
+result[T_3] = result[T_3].simplify()
+
+print(result[T_1])
+print("-----------------")
+print(result[T_2])
+print("-----------------")
+print(result[T_3])
