@@ -6,88 +6,56 @@ from geometry_msgs.msg import PointStamped
 from contact_manipulator.msg import servo_angles
 from dynamic_reconfigure.server import Server
 from contact_manipulator.cfg import GeomConfig
-class geom:
+class geom: #data from dynamic reconfigure
     def __init__(self, r, b, l, L):
-        self.r = r
-        self.b = b
-        self.l = l
-        self.L = L
-    
-def config_callback(config, level): 
-    geom.l = config.l
-    geom.L = config.L
-    geom.r = config.r
-    geom.b = config.b
-    
-    return config
-class callback_force:
-    crrnt_msg = servo_angles()
-    crrnt_msg.header.frame_id = "/servos"
-    def __init__(self, theta, phi, z, T_theta, T_phi, F_z):
-        L = geom.L         #distal link length in m
-        l = geom.l         #proximal link length in m
-        r = geom.r         #end-effector platform radius in m
-        b = geom.b         #base radius in m
-
-        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(Servo.Theta_1))/L)
-        beta = np.arccos((b + l * np.cos(Servo.Theta_2) - r * np.cos(phi))/L)
-        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(Servo.Theta_3))/L)
-
-        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
-            + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
-            + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) 
-            + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)
-            *np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)
-            *np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)*np.sin(gamma + theta)
-            *np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)
-            *np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha - theta)*np.cos(phi) 
-            + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta))
-            *np.sin(Servo.Theta_1 - alpha))
+        self.l = l  #distal link length in m
+        self.L = L  #proximal link length in m
+        self.r = r  #end-effector platform radius in m
+        self.b = b  #base radius in m   
+    def config_callback(config, level): 
+        geom.l = config.l
+        geom.L = config.L
+        geom.r = config.r
+        geom.b = config.b
+        return config
+class delta:
+    def __init__(self, pos, force):
+        #take subscribed messages and store as nice variables
+        self.theta = pos.point.x
+        self.phi = pos.point.y
+        self.z = pos.point.z
+        self.T_theta = force.point.x
+        self.T_phi = force.point.y
+        self.F_z = force.point.z
         
-        T2 = T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)
-            *np.cos(theta))*np.sin(Servo.Theta_2 - beta))
-        
-        T3 = l*(-F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) - F_z*r*np.sin(phi)
-            *np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(alpha)
-            *np.sin(beta)*np.sin(phi)*np.sin(theta) - T_phi*np.sin(beta)*np.sin(alpha 
-            - theta) + T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) + T_theta*np.sin(alpha)
-            *np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)
-            *np.sin(gamma + theta)*np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma 
-            + theta)*np.cos(beta)*np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha 
-            - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
-            *np.cos(theta))*np.sin(Servo.Theta_3 - gamma))
-    
-        #calculate servo current limit to achieve desired torque (taken from datasheet graph)
-        I1 = abs(int((-0.66733 * T1 - 0.05492) *1000 / 2.69))
-        I2 = abs(int((-0.66733 * T2 - 0.05492) *1000 / 2.69))
-        I3 = abs(int((-0.66733 * T3 - 0.05492) *1000 / 2.69))
+    def callback(self): #callback returns servo angle/torque messages
+        ang = self.callback_ang()
+        crrnt = self.callback_crrnt()
+        return ang, crrnt
 
-        self.crrnt_msg.theta1 = I1
-        self.crrnt_msg.theta2 = I2
-        self.crrnt_msg.theta3 = I3
-        self.crrnt_msg.header.stamp = rospy.Time.now()
+    def callback_ang(self):  #return servo angle message   
 
-class Servo:
-    def __init__(self, Theta_1, Theta_2, Theta_3):
-        self.Theta_1 = Theta_1
-        self.Theta_2 = Theta_2
-        self.Theta_3 = Theta_3
-class callback_ang:
-    ang_msg = servo_angles()
-    ang_msg.header.frame_id = "/servos"
-    def __init__(self, theta, phi, z):
-        L = geom.L         #distal link length in m
-        l = geom.l         #proximal link length in m
-        r = geom.r         #end-effector platform radius in m
-        b = geom.b         #base radius in m
+        self.theta1, self.theta2, self.theta3 = self.inverse_kinematics(self.theta, self.phi, self.z, geom.L, geom.l, geom.r, geom.b)
 
-        Servo.Theta_1, Servo.Theta_2, Servo.Theta_3 = self.inverse_kinematics(theta, phi, z, L, l, r, b)
-        
-        #convert servo angles to bits
-        self.ang_msg.theta1 = int(2048 + 1024 * (Servo.Theta_1 * (2/np.pi)))
-        self.ang_msg.theta2 = int(2048 + 1024 * (Servo.Theta_2 * (2/np.pi)))
-        self.ang_msg.theta3 = int(2048 - 1024 * (Servo.Theta_3 * (2/np.pi)))
-        self.ang_msg.header.stamp = rospy.Time.now()
+        thetb1 = self.rads2bits(self.theta1,"pos")
+        thetb2 = self.rads2bits(self.theta2,"pos")
+        thetb3 = self.rads2bits(self.theta3,"neg")
+
+        ang_msg = ServoMsg(thetb1,thetb2,thetb3).msg
+
+        return ang_msg
+
+    def callback_crrnt(self): #return servo current message
+
+        T1, T2, T3 = self.torque_limits(self.theta, self.phi, self.z, self.T_theta, self.T_phi, self.F_z, geom.L, geom.l, geom.r, geom.b)
+
+        I1 = self.torque2current(T1)
+        I2 = self.torque2current(T2)
+        I3 = self.torque2current(T3)
+
+        crrnt_msg = ServoMsg(I1,I2,I3).msg
+
+        return crrnt_msg
 
     def inverse_kinematics(self, theta, phi, z, L, l, r, b):
         #Solve position kinematics
@@ -104,19 +72,74 @@ class callback_ang:
         I = (L**2 - G**2 - H**2 - l**2) / (2*l)
 
         #servo angles in radians
-        servo1 = self.trig_solve(A,B,C)
-        servo2 = self.trig_solve(D,E,F)
-        servo3 = self.trig_solve(G,H,I)
+        theta1 = self.trig_solve(A,B,C)
+        theta2 = self.trig_solve(D,E,F)
+        theta3 = self.trig_solve(G,H,I)
 
-        return servo1, servo2, servo3
+        return theta1, theta2, theta3
     
     def trig_solve(self,a,b,c):
+        # solve equations using tan substitution
         if b == 0.0:
             x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.pi/2
         else:
             x = np.arccos(c / (np.sqrt(a**2 + b**2))) + np.arctan(a / b)
-        return x    
-class Controller:
+        return x   
+    
+    def rads2bits(self,theta,dir):
+        #convert from radians to bit values recongnised by dynamixels
+        if dir == "pos":
+            thetb = int(2048 + 1024 * (theta * (2/np.pi)))
+        elif dir == "neg":
+            thetb = int(2048 - 1024 * (theta * (2/np.pi)))
+        return thetb 
+
+    def torque2current(self,T):
+        #calculate servo current limit to achieve desired torque (taken from datasheet graph)
+        I = int((-0.66733 * T - 0.05492) *1000 / 2.69)
+        return I
+
+    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, L, l, r, b):
+        #calculate torque limits for each servo
+        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(self.theta1))/L)
+        beta = np.arccos((b + l * np.cos(self.theta2) - r * np.cos(phi))/L)
+        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(self.theta3))/L)
+
+        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
+            + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
+            + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) 
+            + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)
+            *np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)
+            *np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)*np.sin(gamma + theta)
+            *np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)
+            *np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha - theta)*np.cos(phi) 
+            + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta))
+            *np.sin(self.theta1 - alpha))
+    
+        T2 = T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)
+            *np.cos(theta))*np.sin(self.theta2 - beta))
+        
+        T3 = l*(-F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) - F_z*r*np.sin(phi)
+            *np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(alpha)
+            *np.sin(beta)*np.sin(phi)*np.sin(theta) - T_phi*np.sin(beta)*np.sin(alpha 
+            - theta) + T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) + T_theta*np.sin(alpha)
+            *np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)
+            *np.sin(gamma + theta)*np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma 
+            + theta)*np.cos(beta)*np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha 
+            - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
+            *np.cos(theta))*np.sin(self.theta3 - gamma))
+
+        return T1, T2, T3 
+class ServoMsg: #class to assign values to servo_angles message format
+    msg = servo_angles()
+    msg.header.frame_id = "/servos"
+    def __init__(self, Theta1, Theta2, Theta3): 
+        self.msg.header.stamp = rospy.Time.now() 
+        self.msg.theta1 = Theta1
+        self.msg.theta2 = Theta2
+        self.msg.theta3 = Theta3
+        
+class Controller: #init publishers and subscribers
     def __init__(self):
         robot_name = rospy.get_param('/namespace') 
         self.pub_ang = rospy.Publisher(robot_name+'/servo_angles_setpoint', servo_angles, queue_size=1) # servo angle publisher
@@ -128,22 +151,13 @@ class Controller:
         ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force], 1, 100)
         ts.registerCallback(self.tip_callback)
         
-    def tip_callback(self, sub_pos, sub_force):
-        theta = sub_pos.point.x
-        phi = sub_pos.point.y
-        z = sub_pos.point.z
-        T_theta = sub_force.point.x
-        T_phi = sub_force.point.y
-        F_z = sub_force.point.z
-
-        ang = callback_ang(theta, phi, z).ang_msg
+    def tip_callback(self, sub_pos, sub_force): #callback calculates servo angles/torques
+        ang, crrnt = delta(sub_pos,sub_force).callback()
         self.pub_ang.publish(ang)
-        crrnt = callback_force(theta, phi, z, T_theta, T_phi, F_z).crrnt_msg
         self.pub_crrnt.publish(crrnt)
         
-
-if __name__ == '__main__':
+if __name__ == '__main__': #initialise node and run loop
     rospy.init_node('delta_main_node', anonymous=True)
-    srv = Server(GeomConfig, config_callback)
+    srv = Server(GeomConfig, geom.config_callback)
     Controller()
     rospy.spin()
