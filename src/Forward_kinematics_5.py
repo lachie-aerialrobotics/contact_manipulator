@@ -130,13 +130,13 @@ pprint(result_tp2[1])
 print("z:")
 pprint(result_z_3[0].simplify().subs(tt2,result_tt2[3]).simplify())
 
-print("ta2")
-pprint(result_ta2[0].subs(tt2,result_tt2[5]).simplify())
+#print("ta2")
+#pprint(result_ta2[0].subs(tt2,result_tt2[5]).simplify())
 
-print("tb2")
-pprint(result_tb2[0].simplify().subs(tp2,result_tp2[1]).simplify())
+#print("tb2")
+#pprint(result_tb2[0].simplify().subs(tp2,result_tp2[1]).simplify())
 
-print("tg2")
-pprint(result_tg2[0].simplify().subs(tt2,result_tt2[3]).simplify())
+#print("tg2")
+#pprint(result_tg2[0].simplify().subs(tt2,result_tt2[3]).simplify())
 
 #pretty_printer()

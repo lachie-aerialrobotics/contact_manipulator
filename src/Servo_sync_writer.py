@@ -174,9 +174,9 @@ if __name__ == '__main__':
 
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
-    servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_commanded', servo_angles) #target angle subscriber
+    servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles) #target angle subscriber
     servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
-    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles_measured', servo_angles, queue_size=1) # servo angle publisher
+    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
     ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 100)
     ts.registerCallback(ServoCallback)
     rospy.spin()

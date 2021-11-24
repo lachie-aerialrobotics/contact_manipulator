@@ -77,6 +77,42 @@ class delta:
         theta3 = self.trig_solve(G,H,I)
 
         return theta1, theta2, theta3
+
+    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, L, l, r, b):
+        #calculate torque limits for each servo
+        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(self.theta1))/L)
+        beta = np.arccos((b + l * np.cos(self.theta2) - r * np.cos(phi))/L)
+        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(self.theta3))/L)
+
+        # T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
+        #     + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
+        #     + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) 
+        #     + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)
+        #     *np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)
+        #     *np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)*np.sin(gamma + theta)
+        #     *np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)
+        #     *np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha - theta)*np.cos(phi) 
+        #     + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta))
+        #     *np.sin(self.theta1 - alpha))
+    
+        # T2 = T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)
+        #     *np.cos(theta))*np.sin(self.theta2 - beta))
+        
+        # T3 = l*(-F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) - F_z*r*np.sin(phi)
+        #     *np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(alpha)
+        #     *np.sin(beta)*np.sin(phi)*np.sin(theta) - T_phi*np.sin(beta)*np.sin(alpha 
+        #     - theta) + T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) + T_theta*np.sin(alpha)
+        #     *np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)
+        #     *np.sin(gamma + theta)*np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma 
+        #     + theta)*np.cos(beta)*np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha 
+        #     - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
+        #     *np.cos(theta))*np.sin(self.theta3 - gamma))
+
+        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)*np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta1 - alpha))
+        T2 = -T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta2 - beta))
+        T3 = -l*(F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) - T_phi*np.sin(alpha)*np.sin(beta)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(alpha - theta) - T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) - T_theta*np.sin(alpha)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta3 - gamma))
+
+        return T1, T2, T3 
     
     def trig_solve(self,a,b,c):
         # solve equations using tan substitution
@@ -96,40 +132,10 @@ class delta:
 
     def torque2current(self,T):
         #calculate servo current limit to achieve desired torque (taken from datasheet graph)
-        I = int((-0.66733 * T - 0.05492) *1000 / 2.69)
+        I = int((0.66733 * abs(T) + 0.05492) *1000 / 2.69)
+        if I > 648:
+            I = 648 #do not let current exceed limit
         return I
-
-    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, L, l, r, b):
-        #calculate torque limits for each servo
-        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(self.theta1))/L)
-        beta = np.arccos((b + l * np.cos(self.theta2) - r * np.cos(phi))/L)
-        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(self.theta3))/L)
-
-        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
-            + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
-            + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) 
-            + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)
-            *np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)
-            *np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)*np.sin(gamma + theta)
-            *np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)
-            *np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha - theta)*np.cos(phi) 
-            + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta))
-            *np.sin(self.theta1 - alpha))
-    
-        T2 = T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)
-            *np.cos(theta))*np.sin(self.theta2 - beta))
-        
-        T3 = l*(-F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) - F_z*r*np.sin(phi)
-            *np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(alpha)
-            *np.sin(beta)*np.sin(phi)*np.sin(theta) - T_phi*np.sin(beta)*np.sin(alpha 
-            - theta) + T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) + T_theta*np.sin(alpha)
-            *np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)
-            *np.sin(gamma + theta)*np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma 
-            + theta)*np.cos(beta)*np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha 
-            - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
-            *np.cos(theta))*np.sin(self.theta3 - gamma))
-
-        return T1, T2, T3 
 class ServoMsg: #class to assign values to servo_angles message format
     msg = servo_angles()
     msg.header.frame_id = "/servos"
@@ -147,7 +153,8 @@ class Controller: #init publishers and subscribers
 
         self.sub_pos = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #target angle subscriber
         self.sub_force = message_filters.Subscriber(robot_name+'/tip_force', PointStamped) #target force subscriber
-        
+        # self.sub_ang = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #servo angle subscriber
+
         ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force], 1, 100)
         ts.registerCallback(self.tip_callback)
         

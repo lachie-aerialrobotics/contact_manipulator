@@ -25,7 +25,7 @@ F_1 = Matrix([T_1/l * sin(Theta_1), 0, T_1/l * cos(Theta_1)]).dot(n_1)*n_1
 F_2 = Matrix([0, T_2/l * sin(Theta_2), T_2/l * cos(Theta_2)]).dot(n_2)*n_2
 F_3 = Matrix([T_3/-l * sin(Theta_3), 0, T_3/l * cos(Theta_3)]).dot(n_3)*n_3
 
-T = F_1.cross(R * PA_1) + F_2.cross(R * PA_2) + F_3.cross(R * PA_3)
+T = F_1.cross(R * PA_1) - F_2.cross(R * PA_2) + F_3.cross(R * PA_3)
 F = F_1 + F_2 + F_3
 
 var("F_z T_phi T_theta")
@@ -40,8 +40,8 @@ result[T_1] = result[T_1].simplify().factor()
 result[T_2] = result[T_2].simplify().factor()
 result[T_3] = result[T_3].simplify().factor()
 
-pprint(result[T_1])
+print(result[T_1])
 print("-----------------")
-pprint(result[T_2])
+print(result[T_2])
 print("-----------------")
-pprint(result[T_3])
+print(result[T_3])
