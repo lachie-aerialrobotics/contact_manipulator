@@ -19,14 +19,19 @@ class geom: #data from dynamic reconfigure
         geom.b = config.b
         return config
 class delta:
-    def __init__(self, pos, force):
+    def __init__(self, pos, force, ang_true):
         #take subscribed messages and store as nice variables
         self.theta = pos.point.x
         self.phi = pos.point.y
         self.z = pos.point.z
+
         self.T_theta = force.point.x
         self.T_phi = force.point.y
         self.F_z = force.point.z
+
+        self.theta1_true = ang_true.theta1
+        self.theta2_true = ang_true.theta2
+        self.theta3_true = ang_true.theta3
         
     def callback(self): #callback returns servo angle/torque messages
         ang = self.callback_ang()
@@ -46,8 +51,11 @@ class delta:
         return ang_msg
 
     def callback_crrnt(self): #return servo current message
+        
+        theta, phi, z = self.forward_kinematics(self.theta1_true, self.theta2_true, self.theta3_true)
 
-        T1, T2, T3 = self.torque_limits(self.theta, self.phi, self.z, self.T_theta, self.T_phi, self.F_z, geom.L, geom.l, geom.r, geom.b)
+        T1, T2, T3 = self.torque_limits(theta, phi, z, self.theta1_true, self.theta2_true, self.theta3_true, 
+            self.T_theta, self.T_phi, self.F_z, geom.L, geom.l, geom.r, geom.b)
 
         I1 = self.torque2current(T1)
         I2 = self.torque2current(T2)
@@ -78,42 +86,38 @@ class delta:
 
         return theta1, theta2, theta3
 
-    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, L, l, r, b):
+    def torque_limits(self, theta, phi, z, theta1, theta2, theta3, T_theta, T_phi, F_z, L, l, r, b):
         #calculate torque limits for each servo
-        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(self.theta1))/L)
-        beta = np.arccos((b + l * np.cos(self.theta2) - r * np.cos(phi))/L)
-        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(self.theta3))/L)
+        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(theta1))/L)
+        beta = np.arccos((b + l * np.cos(theta2) - r * np.cos(phi))/L)
+        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(theta3))/L)
 
-        # T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
-        #     + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
-        #     + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) 
-        #     + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)
-        #     *np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)
-        #     *np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)*np.sin(gamma + theta)
-        #     *np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)
-        #     *np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha - theta)*np.cos(phi) 
-        #     + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta))
-        #     *np.sin(self.theta1 - alpha))
-    
-        # T2 = T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)
-        #     *np.cos(theta))*np.sin(self.theta2 - beta))
-        
-        # T3 = l*(-F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) - F_z*r*np.sin(phi)
-        #     *np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(alpha)
-        #     *np.sin(beta)*np.sin(phi)*np.sin(theta) - T_phi*np.sin(beta)*np.sin(alpha 
-        #     - theta) + T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) + T_theta*np.sin(alpha)
-        #     *np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(beta)
-        #     *np.sin(gamma + theta)*np.cos(phi) + np.sin(alpha)*np.sin(phi)*np.sin(gamma 
-        #     + theta)*np.cos(beta)*np.cos(theta) + np.sin(beta)*np.sin(gamma)*np.sin(alpha 
-        #     - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
-        #     *np.cos(theta))*np.sin(self.theta3 - gamma))
+        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) + 
+            F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) + 
+            T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) + 
+            T_phi*np.sin(beta)*np.sin(gamma + theta) + 
+            T_theta*np.sin(beta)*np.sin(gamma)*np.cos(phi) + 
+            T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + 
+            theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + 
+            np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta1 - alpha))
 
-        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)*np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta1 - alpha))
-        T2 = -T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta2 - beta))
-        T3 = -l*(F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) - T_phi*np.sin(alpha)*np.sin(beta)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(alpha - theta) - T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) - T_theta*np.sin(alpha)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta3 - gamma))
+        T2 = -T_phi*l/(r*(np.sin(beta)*np.cos(phi) + 
+            np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta2 - beta))
+
+        T3 = -l*(F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) + 
+            F_z*r*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) - 
+            T_phi*np.sin(alpha)*np.sin(beta)*np.sin(phi)*np.sin(theta) + 
+            T_phi*np.sin(beta)*np.sin(alpha - theta) - T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) - 
+            T_theta*np.sin(alpha)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + 
+            np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) 
+            + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta3 - gamma))
 
         return T1, T2, T3 
     
+    def forward_kinematics(self, theta1, theta2, theta3):
+        
+        return theta, phi, z
+
     def trig_solve(self,a,b,c):
         # solve equations using tan substitution
         if b == 0.0:
@@ -153,13 +157,13 @@ class Controller: #init publishers and subscribers
 
         self.sub_pos = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #target angle subscriber
         self.sub_force = message_filters.Subscriber(robot_name+'/tip_force', PointStamped) #target force subscriber
-        # self.sub_ang = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #servo angle subscriber
+        self.sub_ang = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #servo angle subscriber
 
-        ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force], 1, 100)
+        ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force, self.sub_ang], 1, 100)
         ts.registerCallback(self.tip_callback)
         
-    def tip_callback(self, sub_pos, sub_force): #callback calculates servo angles/torques
-        ang, crrnt = delta(sub_pos,sub_force).callback()
+    def tip_callback(self, sub_pos, sub_force, sub_ang): #callback calculates servo angles/torques
+        ang, crrnt = delta(sub_pos,sub_force, sub_ang).callback()
         self.pub_ang.publish(ang)
         self.pub_crrnt.publish(crrnt)
         
