@@ -8,7 +8,7 @@
   
   <node name="Inverse_kinematics" pkg="contact_manipulator" type="Inverse_kinematics.py" required="true" output="screen"/>
 
-  <node name="Servo_writer" pkg="contact_manipulator" type="Servo_sync_writer.py" required="true" output="screen"/>
+  <!--<node name="Servo_writer" pkg="contact_manipulator" type="Servo_sync_writer.py" required="true" output="screen"/>!-->
 
   <!-- <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/> !-->
 </launch>

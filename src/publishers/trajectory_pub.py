@@ -20,7 +20,7 @@ class Trajectory:
             force = callback_force().force_msg
             self.pub_pos.publish(pos)
             self.pub_force.publish(force)
-            rate.sleep
+            rate.sleep()
 
 class callback_pos:
     pos_msg = PointStamped()
@@ -58,20 +58,20 @@ class callback_force:
 
     def __init__(self):
         self.force_msg.header.stamp = rospy.Time.now()
-        self.force_msg.point.x = cfg.T_theta
-        self.force_msg.point.y = cfg.T_phi
-        self.force_msg.point.z = cfg.F_z
+        self.force_msg.point.x = cfg.T_1
+        self.force_msg.point.y = cfg.T_2
+        self.force_msg.point.z = cfg.T_3
 
 class cfg:
-    def __init__(self, r, theta, phi, z, v, F_z, T_theta, T_phi, mode):
+    def __init__(self, r, theta, phi, z, v, T_1, T_2, T_3, mode):
         self.r = r
         self.theta = theta
         self.phi = phi
         self.z = z
         self.v = v
-        self.F_z = F_z
-        self.T_theta = T_theta
-        self.T_phi = T_phi
+        self.T_1 = T_1
+        self.T_2 = T_2
+        self.T_3 = T_3
         self.mode = mode
 
 def config_callback(config, level): 
@@ -80,9 +80,9 @@ def config_callback(config, level):
     cfg.phi = config.phi
     cfg.z = config.z
     cfg.v = config.v  
-    cfg.F_z = config.F_z
-    cfg.T_theta = config.T_theta
-    cfg.T_phi = config.T_phi
+    cfg.T_1 = config.T_1
+    cfg.T_2 = config.T_2
+    cfg.T_3 = config.T_3
     cfg.mode = config.mode
     return config
          
