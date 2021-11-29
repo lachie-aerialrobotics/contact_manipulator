@@ -66,12 +66,12 @@ def Initialise():
         else:
             print("Dynamixel#%d has been successfully connected" % DXL_ID[i])
     
-    # Add parameter storage for present positions
-    for i in range(3):
-       dxl_addparam_result = groupSyncRead.addParam(DXL_ID[i])
-       if dxl_addparam_result != True:
-           print("[ID:%03d] groupSyncRead addparam failed" % DXL_ID[i])
-           quit()
+    # # Add parameter storage for present positions
+    # for i in range(3):
+    #    dxl_addparam_result = groupSyncRead.addParam(DXL_ID[i])
+    #    if dxl_addparam_result != True:
+    #        print("[ID:%03d] groupSyncRead addparam failed" % DXL_ID[i])
+    #        quit()
 
     return groupSyncWrite_pstn, groupSyncWrite_crnt, groupSyncRead, portHandler, packetHandler
 
@@ -86,17 +86,17 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     for i in range(3):
         param_goal_position[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position[i]))]
         # Add Dynamixel goal position value to the Syncwrite parameter storage
-        dxl_addparam_result = groupSyncWrite_pstn.addParam(DXL_ID[i], param_goal_position[i])
-        if dxl_addparam_result != True:
+        dxl_addparam_result_pstn = groupSyncWrite_pstn.addParam(DXL_ID[i], param_goal_position[i])
+        if dxl_addparam_result_pstn != True:
             print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
             #quit()
         
     #SyncWrite goal position    
-    dxl_comm_result = groupSyncWrite_pstn.txPacket()
-    if dxl_comm_result != COMM_SUCCESS:
+    dxl_comm_result_pstn = groupSyncWrite_pstn.txPacket()
+    if dxl_comm_result_pstn != COMM_SUCCESS:
         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
-    # Clear Syncwrite parameter storage
+    #Clear Syncwrite parameter storage
     groupSyncWrite_pstn.clearParam()
 
     dxl_current_lim = [None] * 3
@@ -105,47 +105,57 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     dxl_current_lim[1] = servo_current_sub.theta1
     dxl_current_lim[2] = servo_current_sub.theta1
 
-    for i in range(3):
-        param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
-        # Add Dynamixel current_lim value to the Syncwrite parameter storage
-        dxl_addparam_result = groupSyncWrite_crnt.addParam(DXL_ID[i], param_current_lim[i])
-        if dxl_addparam_result != True:
-            print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
-            #quit()
+    # for i in range(3):
+    #     param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
+    #     # Add Dynamixel current_lim value to the Syncwrite parameter storage
+    #     dxl_addparam_result_crnt = groupSyncWrite_crnt.addParam(DXL_ID[i], param_current_lim[i])
+    #     if dxl_addparam_result_crnt != True:
+    #         print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
+    #         #quit()
         
-    #SyncWrite current_lim 
-    dxl_comm_result = groupSyncWrite_crnt.txPacket()
-    if dxl_comm_result != COMM_SUCCESS:
-        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    # #SyncWrite current_lim 
+    # dxl_comm_result_crnt = groupSyncWrite_crnt.txPacket()
+    # if dxl_comm_result_crnt != COMM_SUCCESS:
+    #     print("CURRENT ERROR")
+    #     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
-    # Clear Syncwrite parameter storage
-    groupSyncWrite_crnt.clearParam()
+    # # Clear Syncwrite parameter storage
+    # groupSyncWrite_crnt.clearParam()
 
-    dxl_present_position = [None] * 3
-    # Syncread present position
-    if READ_POSITIONS == True:
-        dxl_comm_result = groupSyncRead.txRxPacket()
+    for i in range(3):
+        dxl_comm_result, dxl_error = packetHandler.write2ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_GOAL_CURRENT, dxl_current_lim[i])
         if dxl_comm_result != COMM_SUCCESS:
             print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+        elif dxl_error != 0:
+            print("%s" % packetHandler.getRxPacketError(dxl_error))
+        #else:
+        #    print("Dynamixel#%d has been successfully connected" % DXL_ID[i])
 
-        for i in range(3):
-        # Check if groupSyncread data of Dynamixel is available
-            dxl_getdata_result = groupSyncRead.isAvailable(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
-            if dxl_getdata_result != True:
-                print("[ID:%03d] groupSyncRead getdata failed" % DXL_ID[i])
-                #quit()
+    # dxl_present_position = [None] * 3
+    # # Syncread present position
+    # if READ_POSITIONS == True:
+    #     dxl_comm_result = groupSyncRead.txRxPacket()
+    #     if dxl_comm_result != COMM_SUCCESS:
+    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+
+    #     for i in range(3):
+    #     # Check if groupSyncread data of Dynamixel is available
+    #         dxl_getdata_result = groupSyncRead.isAvailable(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    #         if dxl_getdata_result != True:
+    #             print("[ID:%03d] groupSyncRead getdata failed" % DXL_ID[i])
+    #             #quit()
             
-        # Get present position value
-        for i in range(3):
-            dxl_present_position[i] = groupSyncRead.getData(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    #     # Get present position value
+    #     for i in range(3):
+    #         dxl_present_position[i] = groupSyncRead.getData(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
 
-        theta = servo_angles() # initialise servo angles
-        theta.header.stamp = rospy.Time.now()
-        theta.header.frame_id = "/fcu"
-        theta.theta1 = dxl_present_position[0]
-        theta.theta2 = dxl_present_position[1]
-        theta.theta3 = dxl_present_position[2]
-        servo_angle_pub.publish(theta)
+    #     theta = servo_angles() # initialise servo angles
+    #     theta.header.stamp = rospy.Time.now()
+    #     theta.header.frame_id = "/fcu"
+    #     theta.theta1 = dxl_present_position[0]
+    #     theta.theta2 = dxl_present_position[1]
+    #     theta.theta3 = dxl_present_position[2]
+    #     servo_angle_pub.publish(theta)
 
     
 if __name__ == '__main__':
@@ -176,7 +186,7 @@ if __name__ == '__main__':
     robot_name = rospy.get_param('/namespace')
     servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles) #target angle subscriber
     servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
-    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
+    # servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
     ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 100)
     ts.registerCallback(ServoCallback)
     rospy.spin()

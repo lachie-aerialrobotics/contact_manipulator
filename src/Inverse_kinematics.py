@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from numpy.lib.function_base import angle
 import rospy
 import numpy as np
 import message_filters
@@ -27,11 +28,13 @@ class delta:
         self.T_theta = force.point.x
         self.T_phi = force.point.y
         self.F_z = force.point.z
+
+        #self.ang, self.crrnt = self.callback()
         
-    def callback(self): #callback returns servo angle/torque messages
-        ang = self.callback_ang()
-        crrnt = self.callback_crrnt()
-        return ang, crrnt
+    # def callback(self): #callback returns servo angle/torque messages
+    #     ang = self.callback_ang()
+    #     crrnt = self.callback_crrnt()
+    #     return ang, crrnt
 
     def callback_ang(self):  #return servo angle message   
 
@@ -45,9 +48,16 @@ class delta:
 
         return ang_msg
 
-    def callback_crrnt(self): #return servo current message
+    def callback_crrnt(self, ang_msg): #return servo current message
+        thetb1 = ang_msg.theta1
+        thetb2 = ang_msg.theta2
+        thetb3 = ang_msg.theta3
 
-        T1, T2, T3 = self.torque_limits(self.theta, self.phi, self.z, self.T_theta, self.T_phi, self.F_z, geom.L, geom.l, geom.r, geom.b)
+        theta1 = self.bits2rads(thetb1,"pos")
+        theta2 = self.bits2rads(thetb2,"pos")
+        theta3 = self.bits2rads(thetb3,"neg")
+
+        T1, T2, T3 = self.torque_limits(self.theta, self.phi, self.z, self.T_theta, self.T_phi, self.F_z, theta1, theta2, theta3, geom.L, geom.l, geom.r, geom.b)
 
         I1 = self.torque2current(T1)
         I2 = self.torque2current(T2)
@@ -78,11 +88,11 @@ class delta:
 
         return theta1, theta2, theta3
 
-    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, L, l, r, b):
+    def torque_limits(self, theta, phi, z, T_theta, T_phi, F_z, theta1, theta2, theta3, L, l, r, b):
         #calculate torque limits for each servo
-        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(self.theta1))/L)
-        beta = np.arccos((b + l * np.cos(self.theta2) - r * np.cos(phi))/L)
-        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(self.theta3))/L)
+        alpha = np.arcsin((z - r * np.sin(theta) - l * np.sin(theta1))/L)
+        beta = np.arccos((b + l * np.cos(theta2) - r * np.cos(phi))/L)
+        gamma = np.arcsin((z + r * np.sin(theta) - l * np.sin(theta3))/L)
 
         # T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) 
         #     + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) 
@@ -108,9 +118,9 @@ class delta:
         #     - theta)*np.cos(phi) + np.sin(gamma)*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)
         #     *np.cos(theta))*np.sin(self.theta3 - gamma))
 
-        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)*np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta1 - alpha))
-        T2 = -T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta2 - beta))
-        T3 = -l*(F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) - T_phi*np.sin(alpha)*np.sin(beta)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(alpha - theta) - T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) - T_theta*np.sin(alpha)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(self.theta3 - gamma))
+        T1 = -l*(F_z*r*np.sin(beta)*np.sin(gamma + theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(gamma + theta)*np.cos(beta)*np.cos(theta) + T_phi*np.sin(beta)*np.sin(gamma)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(gamma + theta) + T_theta*np.sin(beta)*np.sin(gamma)*np.cos(phi) + T_theta*np.sin(gamma)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta1 - alpha))
+        T2 = -T_phi*l/(r*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta2 - beta))
+        T3 = -l*(F_z*r*np.sin(beta)*np.sin(alpha - theta)*np.cos(phi) + F_z*r*np.sin(phi)*np.sin(alpha - theta)*np.cos(beta)*np.cos(theta) - T_phi*np.sin(alpha)*np.sin(beta)*np.sin(phi)*np.sin(theta) + T_phi*np.sin(beta)*np.sin(alpha - theta) - T_theta*np.sin(alpha)*np.sin(beta)*np.cos(phi) - T_theta*np.sin(alpha)*np.sin(phi)*np.cos(beta)*np.cos(theta))/(r*(np.sin(alpha)*np.sin(gamma + theta) + np.sin(gamma)*np.sin(alpha - theta))*(np.sin(beta)*np.cos(phi) + np.sin(phi)*np.cos(beta)*np.cos(theta))*np.sin(theta3 - gamma))
 
         return T1, T2, T3 
     
@@ -129,6 +139,13 @@ class delta:
         elif dir == "neg":
             thetb = int(2048 - 1024 * (theta * (2/np.pi)))
         return thetb 
+
+    def bits2rads(self,thetb,dir):
+        if dir =="pos":
+            theta = float((thetb - 2048)/1024 * np.pi/2)
+        elif dir == "neg":
+            theta = float((thetb - 2048)/-1024 * np.pi/2)
+        return theta
 
     def torque2current(self,T):
         #calculate servo current limit to achieve desired torque (taken from datasheet graph)
@@ -159,8 +176,14 @@ class Controller: #init publishers and subscribers
         ts.registerCallback(self.tip_callback)
         
     def tip_callback(self, sub_pos, sub_force): #callback calculates servo angles/torques
-        ang, crrnt = delta(sub_pos,sub_force).callback()
+        ang = delta(sub_pos,sub_force).callback_ang()
+        print("POSITION:")
+        print(ang)
         self.pub_ang.publish(ang)
+        crrnt = delta(sub_pos,sub_force).callback_crrnt(ang)
+        print("CURRENT:")
+        print(crrnt)
+        print("---------------------------------------")
         self.pub_crrnt.publish(crrnt)
         
 if __name__ == '__main__': #initialise node and run loop
