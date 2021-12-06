@@ -21,7 +21,7 @@
 import message_filters
 import rospy
 
-from delta_xl430.msg import servo_angles
+from contact_manipulator.msg import servo_angles
 from dynamixel_sdk import *                    # Uses Dynamixel SDK library
 
 def Initialise():
