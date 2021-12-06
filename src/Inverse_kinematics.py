@@ -13,6 +13,7 @@ class geom: #data from dynamic reconfigure
         self.L = L  #proximal link length in m
         self.r = r  #end-effector platform radius in m
         self.b = b  #base radius in m   
+    @staticmethod
     def config_callback(config, level): 
         geom.l = config.l
         geom.L = config.L
