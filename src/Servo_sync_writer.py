@@ -177,7 +177,7 @@ if __name__ == '__main__':
     # Default setting
     DXL_ID                      = [1,2,3]
     BAUDRATE                    = 3000000             # Dynamixel default baudrate : 57600
-    DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
+    DEVICENAME                  = '/dev/ttyUSB1'    # Check which port is being used on your controller
 
 
     groupSyncWrite_pstn, groupSyncWrite_crnt, groupSyncRead, portHandler, packetHandler = Initialise()
