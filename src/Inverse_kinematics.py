@@ -150,7 +150,7 @@ class Controller: #init publishers and subscribers
         self.sub_pos = message_filters.Subscriber(robot_name+'/tip_position', PointStamped) #target angle subscriber
         self.sub_force = message_filters.Subscriber(robot_name+'/tip_force', PointStamped) #target force subscriber
 
-        ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force], 1, 100)
+        ts = message_filters.ApproximateTimeSynchronizer([self.sub_pos, self.sub_force], 1, 10)
         ts.registerCallback(self.tip_callback)
         
     def tip_callback(self, sub_pos, sub_force): #callback calculates servo angles/torques
