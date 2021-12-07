@@ -35,12 +35,11 @@ def Initialise():
     # Get methods and members of Protocol1PacketHandler or Protocol2PacketHandler
     packetHandler = PacketHandler(PROTOCOL_VERSION)
 
-    # Initialize GroupSyncWrite instances
-    groupSyncWrite_pstn = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION)
-    #groupSyncWrite_crnt = GroupSyncWrite(portHandler, packetHandler, ADDR_PRO_GOAL_CURRENT, LEN_PRO_GOAL_CURRENT)
+    # Initialize GroupBulkWrite instance
+    groupBulkWrite = GroupBulkWrite(portHandler, packetHandler)
 
-    # Initialize GroupSyncRead instace for Present Position
-    groupSyncRead = GroupSyncRead(portHandler, packetHandler, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    # Initialize GroupBulkRead instace for Present Position
+    groupBulkRead = GroupBulkRead(portHandler, packetHandler)
 
     # Open port
     if portHandler.openPort():
@@ -49,6 +48,7 @@ def Initialise():
         print("Failed to open the port")
         quit()
 
+
     # Set port baudrate
     if portHandler.setBaudRate(BAUDRATE):
         print("Succeeded to change the baudrate")
@@ -56,152 +56,222 @@ def Initialise():
         print("Failed to change the baudrate")
         quit()
 
-    # Enable dynamixel torque
-    for i in range(3):
-        dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_TORQUE_ENABLE, True)
-        if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-        elif dxl_error != 0:
-            print("%s" % packetHandler.getRxPacketError(dxl_error))
-        else:
-            print("Dynamixel#%d has been successfully connected" % DXL_ID[i])
-    
-    # # Add parameter storage for present positions
-    # for i in range(3):
-    #    dxl_addparam_result = groupSyncRead.addParam(DXL_ID[i])
-    #    if dxl_addparam_result != True:
-    #        print("[ID:%03d] groupSyncRead addparam failed" % DXL_ID[i])
-    #        quit()
+    # Enable Dynamixel#1 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    else:
+        print("Dynamixel#%d has been successfully connected" % DXL1_ID)
 
-    return groupSyncWrite_pstn, groupSyncRead, portHandler, packetHandler
+    # Enable Dynamixel#2 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    else:
+        print("Dynamixel#%d has been successfully connected" % DXL2_ID)
+
+    # Enable Dynamixel#3 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL3_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_ENABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    else:
+        print("Dynamixel#%d has been successfully connected" % DXL3_ID)
+
+    # Add parameter storage for Dynamixel#1 present position
+    dxl_addparam_result = groupBulkRead.addParam(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkRead addparam failed" % DXL1_ID)
+        quit()
+
+    # Add parameter storage for Dynamixel#2 present position
+    dxl_addparam_result = groupBulkRead.addParam(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkRead addparam failed" % DXL2_ID)
+        quit()
+
+    # Add parameter storage for Dynamixel#3 present position
+    dxl_addparam_result = groupBulkRead.addParam(DXL3_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkRead addparam failed" % DXL3_ID)
+        quit()
+
+    return groupBulkWrite, groupBulkRead, portHandler, packetHandler
 
 def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
+    dxl_goal_position_1 = servo_angle_sub.theta1
+    dxl_goal_position_2 = servo_angle_sub.theta2
+    dxl_goal_position_3 = servo_angle_sub.theta3
+
+    dxl_goal_current_1 = servo_current_sub.theta1
+    dxl_goal_current_2 = servo_current_sub.theta1
+    dxl_goal_current_3 = servo_current_sub.theta1
+
     # Allocate goal position value into byte array
-    dxl_goal_position = [None] * 3
-    param_goal_position = [None] * 3
-    dxl_goal_position[0] = servo_angle_sub.theta1
-    dxl_goal_position[1] = servo_angle_sub.theta2
-    dxl_goal_position[2] = servo_angle_sub.theta3
+    param_goal_position_1 = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position_1)), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position_1)), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position_1)), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position_1))]
+    param_goal_position_2 = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position_2)), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position_2)), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position_2)), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position_2))]
+    param_goal_position_3 = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position_3)), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position_3)), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position_3)), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position_3))]
+
+    param_goal_current_1 = [DXL_LOBYTE(dxl_goal_current_1), DXL_HIBYTE(dxl_goal_current_1)] 
+    param_goal_current_2 = [DXL_LOBYTE(dxl_goal_current_2), DXL_HIBYTE(dxl_goal_current_2)] 
+    param_goal_current_3 = [DXL_LOBYTE(dxl_goal_current_3), DXL_HIBYTE(dxl_goal_current_3)] 
+
+    # Add Dynamixel#1 goal position value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL1_ID, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION, param_goal_position_1)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL1_ID)
+        quit()
+
+    # Add Dynamixel#2 goal position value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL2_ID, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION, param_goal_position_2)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL2_ID)
+        quit()
+
+    # Add Dynamixel#3 goal position value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL3_ID, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION, param_goal_position_3)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL3_ID)
+        quit()
     
-    for i in range(3):
-        param_goal_position[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position[i])), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position[i])), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position[i]))]
-        # Add Dynamixel goal position value to the Syncwrite parameter storage
-        dxl_addparam_result_pstn = groupSyncWrite_pstn.addParam(DXL_ID[i], param_goal_position[i])
-        if dxl_addparam_result_pstn != True:
-            print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
-            #quit()
-        
-    #SyncWrite goal position    
-    dxl_comm_result_pstn = groupSyncWrite_pstn.txPacket()
-    if dxl_comm_result_pstn != COMM_SUCCESS:
+    # Bulkwrite goal position and LED value
+    dxl_comm_result = groupBulkWrite.txPacket()
+    if dxl_comm_result != COMM_SUCCESS:
         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
-    #Clear Syncwrite parameter storage
-    groupSyncWrite_pstn.clearParam()
+    # Clear bulkwrite parameter storage
+    groupBulkWrite.clearParam()
+ 
+    # Add Dynamixel#1 goal current value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL1_ID, ADDR_PRO_GOAL_CURRENT, LEN_PRO_GOAL_CURRENT, param_goal_current_1)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL1_ID)
+        quit()
 
-    # dxl_current_lim = [None] * 3
-    # param_current_lim = [None] * 3
-    # dxl_current_lim[0] = servo_current_sub.theta1
-    # dxl_current_lim[1] = servo_current_sub.theta1
-    # dxl_current_lim[2] = servo_current_sub.theta1
+    # Add Dynamixel#2 goal current value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL2_ID, ADDR_PRO_GOAL_CURRENT, LEN_PRO_GOAL_CURRENT, param_goal_current_2)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL2_ID)
+        quit()
 
-    # for i in range(3):
-    #     param_current_lim[i] = [DXL_LOBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_LOWORD(dxl_current_lim[i])), DXL_LOBYTE(DXL_HIWORD(dxl_current_lim[i])), DXL_HIBYTE(DXL_HIWORD(dxl_current_lim[i]))]
-    #     # Add Dynamixel current_lim value to the Syncwrite parameter storage
-    #     dxl_addparam_result_crnt = groupSyncWrite_crnt.addParam(DXL_ID[i], param_current_lim[i])
-    #     if dxl_addparam_result_crnt != True:
-    #         print("[ID:%03d] groupSyncWrite addparam failed" % DXL_ID[i])
-    #         #quit()
-        
-    # #SyncWrite current_lim 
-    # dxl_comm_result_crnt = groupSyncWrite_crnt.txPacket()
-    # if dxl_comm_result_crnt != COMM_SUCCESS:
-    #     print("CURRENT ERROR")
-    #     print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    # Add Dynamixel#3 goal current value to the Bulkwrite parameter storage
+    dxl_addparam_result = groupBulkWrite.addParam(DXL3_ID, ADDR_PRO_GOAL_CURRENT, LEN_PRO_GOAL_CURRENT, param_goal_current_3)
+    if dxl_addparam_result != True:
+        print("[ID:%03d] groupBulkWrite addparam failed" % DXL3_ID)
+        quit()
 
-    # # Clear Syncwrite parameter storage
-    # groupSyncWrite_crnt.clearParam()
+    # Bulkwrite goal position and LED value
+    dxl_comm_result = groupBulkWrite.txPacket()
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
-    # for i in range(3):
-    #     dxl_comm_result, dxl_error = packetHandler.write2ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_GOAL_CURRENT, dxl_current_lim[i])
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-        #else:
-        #    print("Dynamixel#%d has been successfully connected" % DXL_ID[i])
+    # Clear bulkwrite parameter storage
+    groupBulkWrite.clearParam()
 
-    # dxl_present_position = [None] * 3
-    # # Syncread present position
-    # if READ_POSITIONS == True:
-    #     dxl_comm_result = groupSyncRead.txRxPacket()
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    # Bulkread present position and LED status
+    dxl_comm_result = groupBulkRead.txRxPacket()
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
 
-    #     for i in range(3):
-    #     # Check if groupSyncread data of Dynamixel is available
-    #         dxl_getdata_result = groupSyncRead.isAvailable(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
-    #         if dxl_getdata_result != True:
-    #             print("[ID:%03d] groupSyncRead getdata failed" % DXL_ID[i])
-    #             #quit()
-            
-    #     # Get present position value
-    #     for i in range(3):
-    #         dxl_present_position[i] = groupSyncRead.getData(DXL_ID[i], ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    # Check if groupbulkread data of Dynamixel#1 is available
+    dxl_getdata_result = groupBulkRead.isAvailable(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_getdata_result != True:
+        print("[ID:%03d] groupBulkRead getdata failed" % DXL1_ID)
+        quit()
 
-    #     theta = servo_angles() # initialise servo angles
-    #     theta.header.stamp = rospy.Time.now()
-    #     theta.header.frame_id = "/fcu"
-    #     theta.theta1 = dxl_present_position[0]
-    #     theta.theta2 = dxl_present_position[1]
-    #     theta.theta3 = dxl_present_position[2]
-    #     servo_angle_pub.publish(theta)
+    # Check if groupbulkread data of Dynamixel#2 is available
+    dxl_getdata_result = groupBulkRead.isAvailable(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_getdata_result != True:
+        print("[ID:%03d] groupBulkRead getdata failed" % DXL2_ID)
+        quit()
+
+    # Check if groupbulkread data of Dynamixel#3 is available
+    dxl_getdata_result = groupBulkRead.isAvailable(DXL3_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    if dxl_getdata_result != True:
+        print("[ID:%03d] groupBulkRead getdata failed" % DXL3_ID)
+        quit()
+
+    # Get present position value
+    dxl_present_position_1 = groupBulkRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    dxl_present_position_2 = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+    dxl_present_position_3 = groupBulkRead.getData(DXL3_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
+
+    theta = servo_angles() # initialise servo angles
+    theta.header.stamp = rospy.Time.now()
+    theta.header.frame_id = "/fcu"
+    theta.theta1 = dxl_present_position_1
+    theta.theta2 = dxl_present_position_2
+    theta.theta3 = dxl_present_position_3
+    servo_angle_pub.publish(theta)
 
     
 if __name__ == '__main__':
     # Control table address
     ADDR_PRO_TORQUE_ENABLE      = 64               # Control table address is different in Dynamixel model
+    ADDR_PRO_LED_RED            = 65
     ADDR_PRO_GOAL_POSITION      = 116
     ADDR_PRO_PRESENT_POSITION   = 132
     ADDR_PRO_GOAL_CURRENT       = 102
 
-    
     # Data Byte Length
+    LEN_PRO_LED_RED             = 1
     LEN_PRO_GOAL_POSITION       = 4
-    LEN_PRO_GOAL_CURRENT        = 2
     LEN_PRO_PRESENT_POSITION    = 4
+    LEN_PRO_GOAL_CURRENT        = 2
 
     # Protocol version
     PROTOCOL_VERSION            = 2.0               # See which protocol version is used in the Dynamixel
 
     # Default setting
-    DXL_ID                      = [1,2,3]
+    DXL1_ID                     = 1                 # Dynamixel#1 ID : 1
+    DXL2_ID                     = 2                 # Dynamixel#1 ID : 2
+    DXL3_ID                     = 3                 # Dynamixel#1 ID : 3
     BAUDRATE                    = 3000000             # Dynamixel default baudrate : 57600
-    DEVICENAME                  = '/dev/ttyUSB1'    # Check which port is being used on your controller
+    DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
+                                                    # ex) Windows: "COM1"   Linux: "/dev/ttyUSB0" Mac: "/dev/tty.usbserial-*"
 
+    TORQUE_ENABLE               = 1                 # Value for enabling the torque
+    TORQUE_DISABLE              = 0                 # Value for disabling the torque
 
-    
 
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
     servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles) #target angle subscriber
     servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
-    # servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
-    groupSyncWrite_pstn, groupSyncRead, portHandler, packetHandler = Initialise()
+    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
+    groupBulkWrite, groupBulkRead, portHandler, packetHandler = Initialise()
     ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 10)
     ts.registerCallback(ServoCallback)
     rospy.spin()
 
-    # Clear Syncread parameter storage
-    #groupSyncRead.clearParam()
+    # Clear bulkread parameter storage
+    groupBulkRead.clearParam()
 
-    #for i in range(3):
-    ## Disable Dynamixels Torque
-    #    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL_ID[i], ADDR_PRO_TORQUE_ENABLE, TORQUE_DISABLE)
-    #    if dxl_comm_result != COMM_SUCCESS:
-    #        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #    elif dxl_error != 0:
-    #        print("%s" % packetHandler.getRxPacketError(dxl_error))
+    # Disable Dynamixel#1 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL1_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_DISABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
 
-    ## Close port
-    #portHandler.closePort()
+    # Disable Dynamixel#2 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL2_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_DISABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+
+    # Disable Dynamixel#3 Torque
+    dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, DXL3_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_DISABLE)
+    if dxl_comm_result != COMM_SUCCESS:
+        print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
+    elif dxl_error != 0:
+        print("%s" % packetHandler.getRxPacketError(dxl_error))
+
+    # Close port
+    portHandler.closePort()
