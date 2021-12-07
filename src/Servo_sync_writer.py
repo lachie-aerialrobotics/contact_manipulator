@@ -180,13 +180,14 @@ if __name__ == '__main__':
     DEVICENAME                  = '/dev/ttyUSB1'    # Check which port is being used on your controller
 
 
-    groupSyncWrite_pstn, groupSyncRead, portHandler, packetHandler = Initialise()
+    
 
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
     servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles) #target angle subscriber
     servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
     # servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
+    groupSyncWrite_pstn, groupSyncRead, portHandler, packetHandler = Initialise()
     ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub, servo_current_sub], 1, 10)
     ts.registerCallback(ServoCallback)
     rospy.spin()
