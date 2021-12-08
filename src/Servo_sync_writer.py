@@ -18,9 +18,7 @@
 
 # Author: Ryu Woon Jung (Leon)
 
-import message_filters
 import rospy
-import time
 from contact_manipulator.msg import servo_angles
 from dynamixel_sdk import *                    # Uses Dynamixel SDK library
 
@@ -46,7 +44,6 @@ def Initialise():
         rospy.loginfo("Succeeded to open the port")
     else:
         rospy.loginfo("Failed to open the port")
-
 
     # Set port baudrate
     if portHandler.setBaudRate(BAUDRATE):
@@ -98,7 +95,6 @@ def Initialise():
     return groupBulkWrite, groupBulkRead, portHandler, packetHandler
 
 def position_callback(servo_angle_sub): #servo_current_sub):
-
     dxl_goal_position_1 = servo_angle_sub.theta1
     dxl_goal_position_2 = servo_angle_sub.theta2
     dxl_goal_position_3 = servo_angle_sub.theta3
@@ -200,7 +196,6 @@ def servo_angles_write(theta_1, theta_2, theta_3):
     theta.theta2 = theta_2
     theta.theta3 = theta_3
     return theta
-
     
 if __name__ == '__main__':
     # Control table address
