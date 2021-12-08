@@ -18,6 +18,7 @@
 
 # Author: Ryu Woon Jung (Leon)
 
+import message_filters
 import rospy
 from contact_manipulator.msg import servo_angles
 from dynamixel_sdk import *                    # Uses Dynamixel SDK library
@@ -126,6 +127,7 @@ def position_callback(servo_angle_sub): #servo_current_sub):
 
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
+    publish_positions()
 
 def current_callback(servo_current_sub):
     dxl_goal_current_1 = servo_current_sub.theta1
@@ -159,6 +161,10 @@ def current_callback(servo_current_sub):
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
 
+def callback(servo_angle_sub, servo_current_sub):
+    position_callback(servo_angle_sub)
+    current_callback(servo_current_sub)
+
 def publish_positions():
     # Bulkread present position and LED status
     dxl_comm_result = groupBulkRead.txRxPacket()
@@ -187,6 +193,7 @@ def publish_positions():
 
     theta = servo_angles_write(dxl_present_position_1, dxl_present_position_2, dxl_present_position_3)
     servo_angle_pub.publish(theta)
+
 
 def servo_angles_write(theta_1, theta_2, theta_3):
     theta = servo_angles()
@@ -219,19 +226,19 @@ if __name__ == '__main__':
     DXL2_ID                     = 2                 # Dynamixel#1 ID : 2
     DXL3_ID                     = 3                 # Dynamixel#1 ID : 3
     BAUDRATE                    = 3000000             # Dynamixel default baudrate : 57600
-    DEVICENAME                  = '/dev/ttyUSB1'    # Check which port is being used on your controller
+    DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
 
     TORQUE_ENABLE               = 1                 # Value for enabling the torque
     TORQUE_DISABLE              = 0                 # Value for disabling the torque
 
-
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
     groupBulkWrite, groupBulkRead, portHandler, packetHandler = Initialise()
-    servo_angle_sub = rospy.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles,position_callback) #target angle subscriber
-    servo_current_sub = rospy.Subscriber(robot_name+'/servo_current_lims', servo_angles,current_callback) #current limit subscriber
     servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
-    publish_positions()
+    servo_angle_sub = message_filters.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles) #target angle subscriber
+    servo_current_sub = message_filters.Subscriber(robot_name+'/servo_current_lims', servo_angles) #current limit subscriber
+    ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub,servo_current_sub],10,0.01)
+    ts.registerCallback(callback)
     rospy.spin()
 
     # Clear bulkread parameter storage
