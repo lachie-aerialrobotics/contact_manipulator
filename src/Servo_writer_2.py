@@ -209,8 +209,9 @@ class servo:
 
 def callback(event):
     position_ping(servo().pos)
-    current_ping(servo().cur)
     publish_positions()
+    current_ping(servo().cur)
+    
 
 
 if __name__ == '__main__':
