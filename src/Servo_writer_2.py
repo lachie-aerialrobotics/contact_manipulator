@@ -235,7 +235,7 @@ if __name__ == '__main__':
     DXL2_ID                     = 2                 # Dynamixel#1 ID : 2
     DXL3_ID                     = 3                 # Dynamixel#1 ID : 3
     BAUDRATE                    = 3000000             # Dynamixel default baudrate : 57600
-    DEVICENAME                  = '/dev/ttyUSB0'    # Check which port is being used on your controller
+    DEVICENAME                  = '/dev/ttyUSB1'    # Check which port is being used on your controller
 
     TORQUE_ENABLE               = 1                 # Value for enabling the torque
     TORQUE_DISABLE              = 0                 # Value for disabling the torque
