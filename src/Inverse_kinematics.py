@@ -9,7 +9,6 @@ from dynamic_reconfigure.server import Server
 from contact_manipulator.cfg import GeomConfig
 class geom: #data from dynamic reconfigure
     def __init__(self, r, b, l, L):
-<<<<<<< HEAD
         self.r = r
         self.b = b
         self.l = l
@@ -118,91 +117,6 @@ def delta_callback_tip(tip_pos_sub, tip_force_sub):
     phi = tip_pos_sub.point.y
 
     R = tip_force_sub.data
-=======
-        self.l = l  #distal link length in m
-        self.L = L  #proximal link length in m
-        self.r = r  #end-effector platform radius in m
-        self.b = b  #base radius in m   
-    @staticmethod
-    def config_callback(config, level): 
-        geom.l = config.l
-        geom.L = config.L
-        geom.r = config.r
-        geom.b = config.b
-        return config
-class delta:
-    def __init__(self, pos, force):
-        #take subscribed messages and store as nice variables
-        self.theta = pos.point.x
-        self.phi = pos.point.y
-        self.z = pos.point.z
-        self.T1 = force.point.x
-        self.T2 = force.point.y
-        self.T3 = force.point.z
-
-    def callback_ang(self):  #return servo angle message         
-        self.theta1, self.theta2, self.theta3, issolved = self.inverse_kinematics(self.theta, self.phi, self.z, geom.L, geom.l, geom.r, geom.b)
-        
-        if issolved == True:
-            self.thetb1 = self.rads2bits(self.theta1,"pos")
-            self.thetb2 = self.rads2bits(self.theta2,"pos")
-            self.thetb3 = self.rads2bits(self.theta3,"neg")
-            cache.thetb1 = self.thetb1
-            cache.thetb2 = self.thetb2
-            cache.thetb3 = self.thetb3
-        else:
-            self.thetb1 = cache.thetb1
-            self.thetb2 = cache.thetb2
-            self.thetb3 = cache.thetb3
-
-        ang_msg = ServoMsg(self.thetb1,self.thetb2,self.thetb3).msg
-        return ang_msg
-
-    def callback_crrnt(self): #return servo current message
-
-        I1 = self.torque2current(self.T1)
-        I2 = self.torque2current(self.T2)
-        I3 = self.torque2current(self.T3)
-
-        crrnt_msg = ServoMsg(I1,I2,I3).msg
-
-        return crrnt_msg
-
-    def inverse_kinematics(self, theta, phi, z, L, l, r, b):
-        #Solve position kinematics
-        A = -z + r * np.sin(theta)
-        B = -r * (np.cos(theta) - np.sin(phi) * np.sin(theta)) + b
-        C = (L**2 - A**2 - B**2 - l**2) / (2*l)
-
-        D = -z - r * np.cos(theta) * np.sin(phi)
-        E = -r * np.cos(phi) + b
-        F = (L**2 - D**2 - E**2 - l**2) / (2*l)
-
-        G = -z - r * np.sin(theta)
-        H = -r * (np.cos(theta) + np.sin(theta) * np.sin(phi)) + b
-        I = (L**2 - G**2 - H**2 - l**2) / (2*l)
-
-        #servo angles in radians
-        theta1, issolved1 = self.trig_solve(A,B,C)
-        theta2, issolved2 = self.trig_solve(D,E,F)
-        theta3, issolved3 = self.trig_solve(G,H,I)
-
-        #check all 3 solutions came out valid
-        issolved = (issolved1 & issolved2) & issolved3
-
-        return theta1, theta2, theta3, issolved
-
-    def solve_checker(self,t):
-        #check that input to arccos is valid 
-        # (this is the bit that goes wrong when manipulator workspace is exceeded)
-        invalid = np.isnan(t) or (t >= 1) or (t <= -1)
-        if invalid == True:
-            rospy.logwarn("Workspace of manipulator exceeded!")
-            issolved = False
-        else:
-            issolved = True
-        return issolved
->>>>>>> torque_limiting_control_2
     
     def trig_solve(self,a,b,c):
         # solve equations using tan substitution
