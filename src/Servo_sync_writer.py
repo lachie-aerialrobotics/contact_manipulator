@@ -204,11 +204,16 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     timer3 = toc3 - tic3
     timer4 = toc4 - tic4
     timer5 = toc5 - tic5
-    rospy.loginfo("LOOP_TIME:                 ", timer1)
-    rospy.loginfo("GROUP_BULK_WRITE_POS_TIME: ", timer2)
-    rospy.loginfo("GROUP_BULK_WRITE_CUR_TIME: ", timer3)
-    rospy.loginfo("GROUP_BULK_READ_POS_TIME:  ", timer4)
-    rospy.loginfo("BYTE_ARRAY_ALLOCATION_TIME:", timer5)
+    rospy.loginfo("LOOP_TIME:                 ")
+    rospy.loginfo(timer1)
+    rospy.loginfo("GROUP_BULK_WRITE_POS_TIME: ")
+    rospy.loginfo(timer2)
+    rospy.loginfo("GROUP_BULK_WRITE_CUR_TIME: ")
+    rospy.loginfo(timer3)
+    rospy.loginfo("GROUP_BULK_READ_POS_TIME:  ")
+    rospy.loginfo(timer4)
+    rospy.loginfo("BYTE_ARRAY_ALLOCATION_TIME:")
+    rospy.loginfo(timer5)
 
 def servo_angles_write(theta_1, theta_2, theta_3):
     theta = servo_angles()
