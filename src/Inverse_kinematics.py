@@ -124,7 +124,7 @@ class delta:
 
     def torque2current(self,T):
         #calculate servo current limit to achieve desired torque (taken from datasheet graph)
-        I = int((0.66733 * abs(T) + 0.05492) *1000 / 2.69)
+        I = int((0.66733 * abs(T) + 0.05492) *1000 / 2.69) - 20 #-20 is a fudge so current can go to zero
         if I > 648:
             I = 648 #do not let current exceed limit
         return I

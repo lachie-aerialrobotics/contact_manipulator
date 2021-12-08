@@ -18,7 +18,6 @@
 
 # Author: Ryu Woon Jung (Leon)
 
-import message_filters
 import rospy
 from contact_manipulator.msg import servo_angles
 from dynamixel_sdk import *                    # Uses Dynamixel SDK library
@@ -95,7 +94,7 @@ def Initialise():
         rospy.loginfo("[ID:%03d] groupBulkRead addparam failed" % DXL3_ID)
     return groupBulkWrite, groupBulkRead, portHandler, packetHandler
 
-def position_callback(servo_angle_sub): #servo_current_sub):
+def position_ping(servo_angle_sub): #servo_current_sub):
     dxl_goal_position_1 = servo_angle_sub.theta1
     dxl_goal_position_2 = servo_angle_sub.theta2
     dxl_goal_position_3 = servo_angle_sub.theta3
@@ -127,9 +126,8 @@ def position_callback(servo_angle_sub): #servo_current_sub):
 
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
-    publish_positions()
 
-def current_callback(servo_current_sub):
+def current_ping(servo_current_sub):
     dxl_goal_current_1 = servo_current_sub.theta1
     dxl_goal_current_2 = servo_current_sub.theta2
     dxl_goal_current_3 = servo_current_sub.theta3
@@ -161,10 +159,6 @@ def current_callback(servo_current_sub):
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
 
-# def callback(servo_angle_sub, servo_current_sub):
-#     position_callback(servo_angle_sub)
-#     current_callback(servo_current_sub)
-
 def publish_positions():
     # Bulkread present position and LED status
     dxl_comm_result = groupBulkRead.txRxPacket()
@@ -194,7 +188,6 @@ def publish_positions():
     theta = servo_angles_write(dxl_present_position_1, dxl_present_position_2, dxl_present_position_3)
     servo_angle_pub.publish(theta)
 
-
 def servo_angles_write(theta_1, theta_2, theta_3):
     theta = servo_angles()
     theta.header.stamp = rospy.Time.now()
@@ -203,7 +196,23 @@ def servo_angles_write(theta_1, theta_2, theta_3):
     theta.theta2 = theta_2
     theta.theta3 = theta_3
     return theta
-    
+
+class servo:
+    pos = servo_angles()
+    cur = servo_angles()
+    @staticmethod
+    def position_callback(servo_angle_sub):
+        servo.pos = servo_angle_sub
+    @staticmethod
+    def current_callback(servo_current_sub):
+        servo.cur = servo_current_sub
+
+def callback(event):
+    position_ping(servo().pos)
+    current_ping(servo().cur)
+    publish_positions()
+
+
 if __name__ == '__main__':
     # Control table address
     ADDR_PRO_TORQUE_ENABLE      = 64               # Control table address is different in Dynamixel model
@@ -235,10 +244,10 @@ if __name__ == '__main__':
     robot_name = rospy.get_param('/namespace')
     groupBulkWrite, groupBulkRead, portHandler, packetHandler = Initialise()
     servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
-    servo_angle_sub = rospy.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles, position_callback) #target angle subscriber
-    servo_current_sub = rospy.Subscriber(robot_name+'/servo_current_lims', servo_angles, current_callback) #current limit subscriber
-    # ts = message_filters.ApproximateTimeSynchronizer([servo_angle_sub,servo_current_sub], 1, 0.02)
-    # ts.registerCallback(callback)
+    servo_angle_sub = rospy.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles, servo.position_callback) #target angle subscriber
+    servo_current_sub = rospy.Subscriber(robot_name+'/servo_current_lims', servo_angles, servo.current_callback) #current limit subscriber
+    rospy.Timer(rospy.Duration(0.01), callback)
+
     rospy.spin()
 
     # Clear bulkread parameter storage
