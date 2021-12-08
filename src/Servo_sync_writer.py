@@ -98,7 +98,7 @@ def Initialise():
     return groupBulkWrite, groupBulkRead, portHandler, packetHandler
 
 def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
-    tic1 = time.perf_counter()
+    tic1 = time.clock()
     dxl_goal_position_1 = servo_angle_sub.theta1
     dxl_goal_position_2 = servo_angle_sub.theta2
     dxl_goal_position_3 = servo_angle_sub.theta3
@@ -107,7 +107,7 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     dxl_goal_current_2 = servo_current_sub.theta2
     dxl_goal_current_3 = servo_current_sub.theta3
     
-    tic5 = time.perf_counter()
+    tic5 = time.clock()
     # Allocate goal position value into byte array
     param_goal_position_1 = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position_1)), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position_1)), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position_1)), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position_1))]
     param_goal_position_2 = [DXL_LOBYTE(DXL_LOWORD(dxl_goal_position_2)), DXL_HIBYTE(DXL_LOWORD(dxl_goal_position_2)), DXL_LOBYTE(DXL_HIWORD(dxl_goal_position_2)), DXL_HIBYTE(DXL_HIWORD(dxl_goal_position_2))]
@@ -116,9 +116,9 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     param_goal_current_1 = [DXL_LOBYTE(dxl_goal_current_1), DXL_HIBYTE(dxl_goal_current_1)] 
     param_goal_current_2 = [DXL_LOBYTE(dxl_goal_current_2), DXL_HIBYTE(dxl_goal_current_2)] 
     param_goal_current_3 = [DXL_LOBYTE(dxl_goal_current_3), DXL_HIBYTE(dxl_goal_current_3)] 
-    toc5 = time.perf_counter()
+    toc5 = time.clock()
 
-    tic2 = time.perf_counter()
+    tic2 = time.clock()
     # Add Dynamixel#1 goal position value to the Bulkwrite parameter storage
     dxl_addparam_result = groupBulkWrite.addParam(DXL1_ID, ADDR_PRO_GOAL_POSITION, LEN_PRO_GOAL_POSITION, param_goal_position_1)
     if dxl_addparam_result != True:
@@ -141,9 +141,9 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
 
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
-    toc2 = time.perf_counter()
+    toc2 = time.clock()
  
-    tic3 = time.perf_counter()
+    tic3 = time.clock()
     # Add Dynamixel#1 goal current value to the Bulkwrite parameter storage
     dxl_addparam_result = groupBulkWrite.addParam(DXL1_ID, ADDR_PRO_GOAL_CURRENT, LEN_PRO_GOAL_CURRENT, param_goal_current_1)
     if dxl_addparam_result != True:
@@ -166,9 +166,9 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
 
     # Clear bulkwrite parameter storage
     groupBulkWrite.clearParam()
-    toc3 = time.perf_counter()
+    toc3 = time.clock()
 
-    tic4 = time.perf_counter()
+    tic4 = time.clock()
     # Bulkread present position and LED status
     dxl_comm_result = groupBulkRead.txRxPacket()
     if dxl_comm_result != COMM_SUCCESS:
@@ -193,12 +193,12 @@ def ServoCallback(servo_angle_sub, servo_current_sub): #servo_current_sub):
     dxl_present_position_1 = groupBulkRead.getData(DXL1_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
     dxl_present_position_2 = groupBulkRead.getData(DXL2_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
     dxl_present_position_3 = groupBulkRead.getData(DXL3_ID, ADDR_PRO_PRESENT_POSITION, LEN_PRO_PRESENT_POSITION)
-    toc4 = time.perf_counter()
+    toc4 = time.clock()
 
     theta = servo_angles_write(dxl_present_position_1, dxl_present_position_2, dxl_present_position_3)
     servo_angle_pub.publish(theta)
 
-    toc1 = time.perf_counter()
+    toc1 = time.clock()
     timer1 = toc1 - tic1
     timer2 = toc2 - tic2
     timer3 = toc3 - tic3
