@@ -187,6 +187,7 @@ def publish_positions():
 
     theta = servo_angles_write(dxl_present_position_1, dxl_present_position_2, dxl_present_position_3)
     servo_angle_pub.publish(theta)
+    # may need to clear parameter storage here?
 
 def servo_angles_write(theta_1, theta_2, theta_3):
     theta = servo_angles()
@@ -244,7 +245,7 @@ if __name__ == '__main__':
     rospy.init_node('Servo_writer', anonymous=True)
     robot_name = rospy.get_param('/namespace')
     groupBulkWrite, groupBulkRead, portHandler, packetHandler = Initialise()
-    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1) # servo angle publisher
+    servo_angle_pub = rospy.Publisher(robot_name+'/servo_angles', servo_angles, queue_size=1, tcp_nodelay=True) # servo angle publisher
     servo_angle_sub = rospy.Subscriber(robot_name+'/servo_angles_setpoint', servo_angles, servo.position_callback) #target angle subscriber
     servo_current_sub = rospy.Subscriber(robot_name+'/servo_current_lims', servo_angles, servo.current_callback) #current limit subscriber
     rospy.Timer(rospy.Duration(0.01), callback)
