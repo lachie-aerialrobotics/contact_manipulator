@@ -56,6 +56,8 @@ find_package(catkin REQUIRED COMPONENTS
 generate_dynamic_reconfigure_options(
    cfg/geom_config.cfg
    cfg/trajectory_config.cfg
+   cfg/Servo_config.cfg
+  #  cfg/Torque_config.cfg
    #cfg/servo_config.cfg
 )
 
